@@ -1,16 +1,16 @@
 exports = module.exports = (function() {
 
-  var Constructor = function(key) {
+  var Constructor = function(key, cb) {
 
     if (! (this instanceof Constructor))
-      return new Constructor(key);
+      return new Constructor(key, cb);
 
     this.key = key || false;
 
     if(! this.key)
       return false;
 
-    cordova.exec(this.listen.bind(this), function(){}, 'AdafruitIO', 'connect', [this.key]);
+    cordova.exec(this.listen.bind(this, cb), this.emit.bind(this, 'error'), 'AdafruitIO', 'connect', [this.key]);
 
   };
 
@@ -18,49 +18,82 @@ exports = module.exports = (function() {
 
   proto.key = false;
   proto.subscriptions = {};
+  proto.listeners = {};
 
   proto.disconnect = function() {
-    cordova.exec(function(){}, function(){}, 'AdafruitIO', 'disconnect');
+    cordova.exec(this.emit.bind(this, 'disconnected'), this.emit.bind(this, 'error'), 'AdafruitIO', 'disconnect');
   };
 
-  proto.listen = function() {
-    cordova.exec(this.onMessage.bind(this), function(){}, 'AdafruitIO', 'setListener');
+  proto.listen = function(cb) {
+    cordova.exec(this.onMessage.bind(this), this.emit.bind(this, 'error'), 'AdafruitIO', 'setListener');
+    this.emit('connected');
+    cb.call(this);
+  };
+
+  proto.on = function(name, callback) {
+
+    if(! Array.isArray(this.listeners[name]))
+      this.listeners[name] = [];
+
+    this.listeners[name].push(callback);
+
+  };
+
+  proto.emit = function(name) {
+
+    if(! this.listeners[name])
+      return;
+
+    if(! Array.isArray(this.listeners[name]))
+      return;
+
+    var num_args = arguments.length,
+        args = new Array(num_args.length - 1);
+
+    for(var i=1; i < num_args; i++) {
+      args[i - 1] = arguments[i];
+    }
+
+    this.listeners[name].forEach(function(cb) {
+      cb.apply(this, args);
+    });
+
   };
 
   proto.onMessage = function(topic, payload) {
 
-    var feed = topic.match(/api\/feeds\/(.*)\/data\/send\.json/)[1];
+    var feed = topic.match(/api\/feeds\/(.*)\/data\/receive\.json/);
 
-    if(! subscription[feed])
+    if(! feed.length === 2)
       return;
 
-    if(! Array.isArray(subscription[feed]))
+    feed = feed[1];
+
+    if(! this.subscriptions[feed])
       return;
 
-    subscription[feed].forEach(function(f) {
+    if(! Array.isArray(this.subscriptions[feed]))
+      return;
 
-      if(typeof f !== 'function')
-        return;
-
+    this.subscriptions[feed].forEach(function(f) {
       f.call(this, payload);
-
     }.bind(this));
 
   };
 
   proto.subscribe = function(feed, callback) {
 
-    if(! Array.isArray(subscription[feed]))
-      subscription[feed] = [];
+    if(! Array.isArray(this.subscriptions[feed]))
+      this.subscriptions[feed] = [];
 
-    subscription[feed].push(callback);
+    this.subscriptions[feed].push(callback);
 
-    cordova.exec(function(){}, function(){}, 'AdafruitIO', 'subscribe', [topic]);
+    cordova.exec(this.emit.bind(this, 'subscribed', feed), this.emit.bind(this, 'error'), 'AdafruitIO', 'subscribe', [feed]);
 
   };
 
   proto.publish = function(feed, payload) {
-    cordova.exec(function(){}, function(){}, 'AdafruitIO', 'publish', [feed, payload.toString()]);
+    cordova.exec(this.emit.bind(this, 'published', feed, payload), this.emit.bind(this, 'error'), 'AdafruitIO', 'publish', [feed, payload.toString()]);
   };
 
   return Constructor;

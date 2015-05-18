@@ -9,8 +9,8 @@
 
   <asset src="www/adafruitio.js" target="js/adafruitio.js"/>
 
-  <js-module src="www/adafruitio.js" name="adafruitio">
-    <clobbers target="adafruitio" />
+  <js-module src="www/adafruitio.js" name="AdafruitIO">
+    <clobbers target="AdafruitIO" />
   </js-module>
 
   <platform name="ios">
