@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="com.toddtreece.adafruitio" version="0.1.0">
+
+  <name>Adafruit IO</name>
+
+  <engines>
+    <engine name="cordova" version=">=3.4.0"/>
+  </engines>
+
+  <asset src="www/adafruitio.js" target="js/adafruitio.js"/>
+
+  <js-module src="www/adafruitio.js" name="adafruitio">
+    <clobbers target="adafruitio" />
+  </js-module>
+
+  <platform name="ios">
+
+    <config-file target="config.xml" parent="/widget">
+      <feature name="AdafruitIO">
+        <param name="ios-package" value="AdafruitIO" />
+      </feature>
+    </config-file>
+
+    <header-file src="src/ios/AdafruitIO.h" />
+    <source-file src="src/ios/AdafruitIO.m" />
+    <header-file src="src/ios/MQTTKit.h" />
+    <source-file src="src/ios/libMQTTKit.a" framework="true" />
+
+  </platform>
+
+</plugin>
